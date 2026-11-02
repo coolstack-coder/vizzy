@@ -67,6 +67,12 @@ export function Player() {
     return () => cancelAnimationFrame(raf);
   }, [tl, playing, loop]);
 
+  const jump = (d: number) => {
+    if (!tl) return;
+    const i = Math.max(0, Math.min(tl.segments.length - 1, segmentAt(tl, time.current) + d));
+    time.current = tl.starts[i] + 0.01;
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
@@ -80,12 +86,6 @@ export function Player() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
-
-  const jump = (d: number) => {
-    if (!tl) return;
-    const i = Math.max(0, Math.min(tl.segments.length - 1, segmentAt(tl, time.current) + d));
-    time.current = tl.starts[i] + 0.01;
-  };
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setError(undefined);

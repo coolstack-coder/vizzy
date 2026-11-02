@@ -5,14 +5,8 @@ import { useState } from "react";
 import { useVizzy, type DirectorMode, type ImageProviderId } from "@/lib/store";
 import { Btn } from "./ui";
 
-export function Settings({ onClose }: { onClose: () => void }) {
-  const { config, keys, directorMode, imageProvider, set, setKeys } = useVizzy();
-  const [draft, setDraft] = useState(keys);
-  const hasDirector = !!config?.director || !!draft.anthropic;
-  const hasGemini = !!config?.gemini || !!draft.gemini;
-  const hasOpenai = !!config?.openai || !!draft.openai;
-
-  const Option = <T extends string>({ value, current, onPick, label, sub, enabled = true }: { value: T; current: T; onPick: (v: T) => void; label: string; sub: string; enabled?: boolean }) => (
+function Option<T extends string>({ value, current, onPick, label, sub, enabled = true }: { value: T; current: T; onPick: (v: T) => void; label: string; sub: string; enabled?: boolean }) {
+  return (
     <button
       disabled={!enabled}
       onClick={() => onPick(value)}
@@ -22,6 +16,14 @@ export function Settings({ onClose }: { onClose: () => void }) {
       <div className="text-xs text-muted">{sub}</div>
     </button>
   );
+}
+
+export function Settings({ onClose }: { onClose: () => void }) {
+  const { config, keys, directorMode, imageProvider, set, setKeys } = useVizzy();
+  const [draft, setDraft] = useState(keys);
+  const hasDirector = !!config?.director || !!draft.anthropic;
+  const hasGemini = !!config?.gemini || !!draft.gemini;
+  const hasOpenai = !!config?.openai || !!draft.openai;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>

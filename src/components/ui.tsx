@@ -6,19 +6,16 @@ import { ASPECT_RATIO } from "@/lib/defaults";
 import type { Aspect, Balloon, LetteringStyle } from "@/lib/types";
 
 export function useImageUrl(id?: string) {
-  const [url, setUrl] = useState(() => cachedImageUrl(id));
+  // Keep the id alongside the loaded URL so a stale URL is never shown for a new id.
+  const [loaded, setLoaded] = useState<{ id?: string; url?: string }>(() => ({ id, url: cachedImageUrl(id) }));
   useEffect(() => {
     let alive = true;
-    if (!id) {
-      setUrl(undefined);
-      return;
-    }
-    imageUrl(id).then((u) => alive && setUrl(u));
+    if (id) imageUrl(id).then((url) => alive && setLoaded({ id, url }));
     return () => {
       alive = false;
     };
   }, [id]);
-  return url;
+  return loaded.id === id ? (loaded.url ?? cachedImageUrl(id)) : cachedImageUrl(id);
 }
 
 export function Btn({

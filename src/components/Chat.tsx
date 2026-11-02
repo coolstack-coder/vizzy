@@ -25,10 +25,13 @@ export function Chat() {
   const [text, setText] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
 
+  const last = chat[chat.length - 1];
+  const lastText = last?.text;
+  const lastCards = last?.cards?.length;
   useEffect(() => {
     const el = scroller.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [chat.length, chat[chat.length - 1]?.text, chat[chat.length - 1]?.cards?.length]);
+  }, [chat.length, lastText, lastCards]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
