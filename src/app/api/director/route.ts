@@ -61,11 +61,15 @@ export async function POST(req: Request) {
         });
       } catch (err) {
         const msg =
-          err instanceof Anthropic.APIError
-            ? `${err.status ?? ""} ${err.message}`.trim()
-            : err instanceof Error
-              ? err.message
-              : String(err);
+          err instanceof Anthropic.AuthenticationError
+            ? "Anthropic rejected the API key."
+            : err instanceof Anthropic.RateLimitError
+              ? "Rate limited by Anthropic. Wait a moment and try again."
+              : err instanceof Anthropic.APIError
+                ? err.message
+                : err instanceof Error
+                  ? err.message
+                  : String(err);
         send({ t: "error", message: msg });
       } finally {
         controller.close();

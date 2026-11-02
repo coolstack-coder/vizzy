@@ -42,7 +42,7 @@ export function balloonsFromSpec(specs: BalloonSpec[]): Balloon[] {
       x: pos.x,
       y: pos.y,
       w: b.kind === "sfx" ? 0.3 : b.kind === "caption" ? 0.42 : 0.36,
-      tail: isTalk ? { x: pos.x + 0.18, y: Math.min(0.95, pos.y + 0.28) } : undefined,
+      tail: isTalk ? { x: pos.x + 0.2, y: Math.min(0.95, pos.y + 0.17) } : undefined,
     };
   });
 }
