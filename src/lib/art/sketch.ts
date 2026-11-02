@@ -34,8 +34,9 @@ function mulberry32(a: number): Rng {
   };
 }
 
+// Prefix match on word boundaries: "tree" matches "trees" but not "street".
 const has = (text: string, words: string[]) =>
-  words.some((w) => text.includes(w));
+  words.some((w) => new RegExp(`(^|[^a-z])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(text));
 
 function mix(a: string, b: string, t: number) {
   const pa = parseHex(a);
@@ -55,11 +56,24 @@ function luminance(h: string) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
+// Only the camera/action/setting lines drive composition; style and cast
+// descriptors ("freckled face") would otherwise trigger the wrong shot.
+const IGNORED = /^\[(FORMAT|STYLE|PALETTE|MOOD|CAST|NEVER|COMPOSITION|CONTINUITY|LAYOUT|SUBJECT)\]/;
+function sceneText(prompt: string) {
+  return prompt
+    .split("\n")
+    .filter((l) => !IGNORED.test(l.trim()))
+    .join(" ")
+    .toLowerCase();
+}
+
 export function renderSketchSvg(input: SketchInput): string {
   const { width: W, height: H } = input;
-  const rnd = mulberry32(hash(input.seed + input.prompt));
+  // Seeded by the option id only, so a refinement (same seed, extra
+  // instruction) keeps its parent's layout and only adds what was asked for.
+  const rnd = mulberry32(hash(input.seed));
   const r = (a: number, b: number) => a + (b - a) * rnd();
-  const text = input.prompt.toLowerCase();
+  const text = sceneText(input.prompt);
 
   const pal = input.palette.length >= 2 ? input.palette : ["#c9b79c", "#b5452b", "#2b2622", "#efe6d2"];
   const byLum = [...pal].sort((a, b) => luminance(a) - luminance(b));
@@ -69,9 +83,9 @@ export function renderSketchSvg(input: SketchInput): string {
   const accent = pal[1] ?? mix(sky, ink, 0.4);
 
   const night = has(text, ["night", "dark", "moon", "midnight", "star"]);
-  const sea = has(text, ["beach", "sea", "ocean", "shore", "wave", "water", "channel", "coast"]);
+  const sea = has(text, ["beach", "sea", "ocean", "shore", "wave", "water", "underwater", "surf", "channel", "coast"]);
   const city = has(text, ["city", "street", "town", "village", "building", "rooftop", "ruin"]);
-  const forest = has(text, ["forest", "tree", "hedge", "woods", "orchard", "jungle", "field"]);
+  const forest = has(text, ["forest", "tree", "hedgerow", "woods", "orchard", "jungle", "field"]);
   const interior = has(text, ["interior", "room", "bunker", "tent", "kitchen", "cabin", "office", "inside", "cockpit"]);
   const fire = has(text, ["fire", "explosion", "smoke", "burning", "flare", "shell", "blast", "battle"]);
   const boats = has(text, ["boat", "ship", "landing craft", "vessel", "higgins", "fleet"]);
@@ -79,10 +93,15 @@ export function renderSketchSvg(input: SketchInput): string {
   const rain = has(text, ["rain", "storm", "drizzle", "spray"]);
   const helmets = has(text, ["soldier", "helmet", "trooper", "infantry", "ranger", "gi ", "army", "private", "sergeant"]);
   const crowd = has(text, ["soldiers", "troops", "crowd", "men ", "squad", "platoon", "army"]);
-  const close = has(text, ["close-up", "close up", "closeup", "portrait", "extreme close", "face"]);
-  const wide = has(text, ["wide", "establishing", "aerial", "panorama", "bird's-eye", "long shot"]);
-  const low = has(text, ["low angle", "worm"]);
-  const high = has(text, ["high angle", "overhead", "bird's-eye", "aerial"]);
+  // A take's own [VARIATION] beats the page's planned [SHOT].
+  const variation = /\[variation\]([^\n]*)/i.exec(input.prompt)?.[1]?.toLowerCase() ?? "";
+  const CLOSE = ["close-up", "close up", "closeup", "portrait", "extreme close", "face"];
+  const WIDE = ["wide", "establishing", "aerial", "panorama", "bird's-eye", "long shot", "high angle"];
+  const shotText = has(variation, [...CLOSE, ...WIDE, "medium", "over-the-shoulder", "silhouette"]) ? variation : text;
+  const close = has(shotText, CLOSE) && !has(shotText, ["wide", "establishing"]);
+  const wide = has(shotText, WIDE);
+  const low = has(shotText, ["low angle", "worm"]);
+  const high = has(shotText, ["high angle", "overhead", "bird's-eye", "aerial"]);
 
   let horizon = H * (high ? r(0.18, 0.3) : low ? r(0.62, 0.74) : r(0.42, 0.56));
   if (close) horizon = H * r(0.55, 0.7);
@@ -259,7 +278,7 @@ export function renderSketchSvg(input: SketchInput): string {
   const figures: { gy: number; svg: string }[] = [];
   if (close) {
     const cx = r(0.38, 0.62) * W;
-    const scale = H * 0.0026 * (low ? 1.12 : 1);
+    const scale = Math.min(W * 0.0016, H * 0.0021) * (low ? 1.12 : 1);
     figures.push({ gy: H, svg: bust(cx, H, scale, ink, helmets, accent) });
   } else {
     for (let i = 0; i < figureCount; i++) {

@@ -184,7 +184,11 @@ function addCards(bubbleId: string, cards: Card[]) {
   if (!cards.length) return;
   useVizzy.getState().mutate((p) => {
     const m = p.chat.find((c) => c.id === bubbleId);
-    if (m) m.cards = [...(m.cards ?? []), ...cards];
+    if (!m) return;
+    // Summary cards (cast, plan…) render live state, so one per message is enough.
+    const singleton = new Set(["brief", "style-bible", "cast", "plan"]);
+    const fresh = cards.filter((c) => !singleton.has(c.kind) || !m.cards?.some((x) => x.kind === c.kind));
+    m.cards = [...(m.cards ?? []), ...fresh];
   });
 }
 

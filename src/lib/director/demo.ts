@@ -221,7 +221,7 @@ function pagesTurn(p: Project, t: string, events: string[]): DemoStep[] {
     return introPage(p, index, true);
   }
 
-  if (/\b(again|more options|regenerate|reroll|different)\b/i.test(t))
+  if (/\b(again|fresh|more (options|takes)|new (options|takes)|regenerate|reroll|different)\b/i.test(t))
     return [{ say: `Fresh takes on page ${n}.`, calls: [{ name: "generate_page_options", input: { page: n, variations: VARIATIONS[(index + 1) % 2] } }] }];
 
   if (YES.test(t) || events.some((e) => e.includes("locked"))) {

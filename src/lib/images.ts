@@ -221,7 +221,7 @@ export async function renderCharacterSheet(characterId: string) {
   if (!c) return;
   const r = await slot(() =>
     render({
-      prompt: compileCharacterSheetPrompt(project, c) + `\nclose-up portrait ${c.look}`,
+      prompt: compileCharacterSheetPrompt(project, c) + `\nclose-up portrait, ${c.wardrobe}`,
       refs: [],
       aspect: "1:1",
       seed: c.id + c.version,
