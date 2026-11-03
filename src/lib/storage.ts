@@ -1,14 +1,46 @@
 "use client";
 
-import { createStore, del, get, keys, set } from "idb-keyval";
+import { del, get, keys, set, type UseStore } from "idb-keyval";
 import type { Project } from "./types";
 import { uid } from "./defaults";
 
 // Projects and image blobs are stored in two IndexedDB stores. Project JSON is
 // small and saved on every change; images are written once and referenced by id.
 
-const projectsDb = () => createStore("vizzy-projects", "projects");
-const imagesDb = () => createStore("vizzy-images", "images");
+/**
+ * Like idb-keyval's createStore, but opens the database once and repairs it if
+ * the object store is missing (a database left half-created or emptied by the
+ * browser would otherwise fail every write until site data was cleared).
+ */
+function resilientStore(dbName: string, storeName: string): UseStore {
+  let db: Promise<IDBDatabase> | undefined;
+  const open = (version?: number) =>
+    new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(dbName, version);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(storeName)) req.result.createObjectStore(storeName);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  const connect = async () => {
+    const first = await open();
+    if (first.objectStoreNames.contains(storeName)) return first;
+    const next = first.version + 1;
+    first.close();
+    return open(next);
+  };
+  return (mode, callback) =>
+    (db ??= connect().catch((e) => {
+      db = undefined; // allow a retry on the next call
+      throw e;
+    })).then((d) => callback(d.transaction(storeName, mode).objectStore(storeName)));
+}
+
+const projectStore = resilientStore("vizzy-projects", "projects");
+const imageStore = resilientStore("vizzy-images", "images");
+const projectsDb = () => projectStore;
+const imagesDb = () => imageStore;
 
 const urlCache = new Map<string, string>();
 
