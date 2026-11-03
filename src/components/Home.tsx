@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, BookOpen, Clapperboard, Palette, Trash2, Users, Wand2 } from "lucide-react";
+import { ArrowRight, BookOpen, Clapperboard, Palette, Trash2, Upload, Users, Wand2 } from "lucide-react";
+import { importBackup } from "@/lib/backup";
 import { useEffect, useMemo, useState } from "react";
 import { renderSketchSvg } from "@/lib/art/sketch";
 import { send } from "@/lib/director/run";
@@ -36,6 +37,7 @@ const COLLAGE = [
 export function Home() {
   const library = useVizzy((s) => s.library);
   const [text, setText] = useState("");
+  const [importError, setImportError] = useState<string>();
   const collage = useMemo(
     () =>
       COLLAGE.map((c, i) => `data:image/svg+xml;utf8,${encodeURIComponent(renderSketchSvg({ ...c, width: 400, height: 600, seed: `home${i}`, figures: 2 }))}`),
@@ -122,25 +124,51 @@ export function Home() {
           ))}
         </div>
 
-        {library.length > 0 && (
-          <div className="mt-12">
-            <h2 className="mb-4 flex items-center gap-2 text-sm uppercase tracking-widest text-faint">
-              <BookOpen size={14} /> Your books
+        <div className="mt-12">
+          <div className="mb-4 flex items-center gap-2">
+            <h2 className="flex items-center gap-2 text-sm uppercase tracking-widest text-faint">
+              <BookOpen size={14} /> {library.length ? "Your books" : "No books yet"}
             </h2>
+            <label className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs text-muted transition hover:border-accent hover:text-accent">
+              <Upload size={13} /> Import backup
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  try {
+                    setImportError(undefined);
+                    const p = await importBackup(file);
+                    await useVizzy.getState().open(p.id);
+                  } catch (err) {
+                    setImportError((err as Error).message);
+                  }
+                }}
+              />
+            </label>
+          </div>
+          {importError && <p className="mb-3 text-xs text-bad">{importError}</p>}
+          {library.length > 0 && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
               {library.map((p) => (
                 <LibraryItem key={p.id} p={p} />
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 function LibraryItem({ p }: { p: Project }) {
-  const cover = p.pages.map((pg) => pg.options.find((o) => o.id === (pg.lockedOptionId ?? pg.selectedId))?.imageId).find(Boolean);
+  // Prefer a chosen page; otherwise any drawn take, so in-progress books get a cover too.
+  const cover =
+    p.pages.map((pg) => pg.options.find((o) => o.id === (pg.lockedOptionId ?? pg.selectedId))?.imageId).find(Boolean) ??
+    p.pages.flatMap((pg) => pg.options).find((o) => o.status === "ready" && o.imageId)?.imageId;
   const locked = p.pages.filter((x) => x.status === "locked").length;
   return (
     <div className="group relative">

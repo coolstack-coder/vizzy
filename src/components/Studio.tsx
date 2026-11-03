@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronLeft, Film, Settings2 } from "lucide-react";
+import { ChevronLeft, Film, Save, Settings2 } from "lucide-react";
+import { exportBackup } from "@/lib/backup";
 import { useState } from "react";
 import { useVizzy } from "@/lib/store";
 import { PHASES } from "@/lib/types";
@@ -68,6 +69,9 @@ export function Studio() {
           <span className="hidden text-[11px] tabular-nums text-faint lg:inline" title={`${project.usage.inputTokens.toLocaleString()} in · ${project.usage.outputTokens.toLocaleString()} out · ${project.usage.images} images`}>
             ${project.usage.costUsd.toFixed(2)} · {project.usage.images} img
           </span>
+          <Btn variant="ghost" onClick={() => void exportBackup(project)} title="Download a backup of this book (.vizzy.json)">
+            <Save size={16} />
+          </Btn>
           <Btn variant="ghost" onClick={() => setSettings(true)} title="Settings">
             <Settings2 size={16} />
           </Btn>
