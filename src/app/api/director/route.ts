@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT } from "@/lib/director/system";
 import { toolDefinitions } from "@/lib/director/tools";
+import { directorRequest, parseJson } from "@/lib/server/validate";
 import { anthropicClient, DIRECTOR_MODEL, DIRECTOR_EFFORT } from "@/lib/server/env";
 
 export const maxDuration = 120;
@@ -21,9 +22,9 @@ export async function POST(req: Request) {
   if (!client)
     return Response.json({ error: "No Anthropic API key configured" }, { status: 401 });
 
-  const { messages } = (await req.json()) as {
-    messages: Anthropic.Beta.BetaMessageParam[];
-  };
+  const parsed = await parseJson(req, directorRequest, 4_000_000);
+  if (parsed.error) return parsed.error;
+  const messages = parsed.data.messages as Anthropic.Beta.BetaMessageParam[];
 
   const encoder = new TextEncoder();
   const body = new ReadableStream({

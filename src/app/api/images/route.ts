@@ -1,3 +1,5 @@
+import type { z } from "zod";
+import { imageRequest, parseJson } from "@/lib/server/validate";
 import { GEMINI_MODEL, OPENAI_MODEL, geminiKey, openaiKey } from "@/lib/server/env";
 
 export const maxDuration = 180;
@@ -6,14 +8,8 @@ export const maxDuration = 180;
 // compiled (style bible + cast + beat); references are downscaled JPEG data
 // URLs: character sheets, the style anchor page, or the image being refined.
 
-interface Body {
-  provider: "gemini" | "openai";
-  prompt: string;
-  aspect: "2:3" | "3:4" | "1:1" | "16:9";
-  refs?: string[];
-  /** For refinement: the image to edit, sent first. */
-  source?: string;
-}
+/** `source` is the image being refined; it is sent first. */
+type Body = z.infer<typeof imageRequest>;
 
 class ProviderError extends Error {
   constructor(message: string, readonly status = 502) {
@@ -22,7 +18,9 @@ class ProviderError extends Error {
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as Body;
+  const parsed = await parseJson(req, imageRequest, 40_000_000);
+  if (parsed.error) return parsed.error;
+  const body = parsed.data;
   const t0 = Date.now();
   try {
     const out =
