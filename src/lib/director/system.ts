@@ -1,4 +1,5 @@
 import type { Project } from "../types";
+import { staleReasons } from "../stale";
 
 export const SYSTEM_PROMPT = `You are Vizzy, a warm, decisive creative director who co-creates graphic novels, picture books and film storyboards with the user, one page at a time, through chat.
 
@@ -19,6 +20,7 @@ Rules:
 - For violent or historical subjects, show weight through implication, scale, aftermath and faces rather than gore. Image models refuse graphic content.
 - UI events arrive inside <ui_events> (e.g. the user selected an option or edited lettering). Acknowledge them naturally; don't ask the user to repeat them.
 - After generate_page_options or refine_option, end your turn with one short line telling the user what to compare. Images render in the background.
+- If the style bible or a character changes after pages are locked, those pages are marked OUT OF DATE in the project state. Mention it once and offer to redraw them; don't redraw without the user's go-ahead.
 - The project state below each user message is the source of truth. Trust it over your memory of earlier turns.`;
 
 /** Compact, human-readable project state sent with every user turn. */
@@ -62,7 +64,7 @@ export function snapshot(p: Project): string {
       const opts = pg.options.filter((o) => o.status !== "error");
       const sel = pg.options.find((o) => o.id === pg.selectedId);
       lines.push(
-        `${i + 1}. [${pg.status}] "${pg.title}" — ${pg.shot.type}, ${pg.shot.angle}${cast ? ` | cast: ${cast}` : ""}${loc ? ` | at: ${loc}` : ""}`,
+        `${i + 1}. [${pg.status}${staleReasons(p, pg).length ? `, OUT OF DATE: ${staleReasons(p, pg).join("; ")}` : ""}] "${pg.title}" — ${pg.shot.type}, ${pg.shot.angle}${cast ? ` | cast: ${cast}` : ""}${loc ? ` | at: ${loc}` : ""}`,
         `   beat: ${pg.beat}`,
         pg.balloons.length
           ? `   lettering: ${pg.balloons.map((x) => `${x.kind}${x.speaker ? `(${x.speaker})` : ""}: "${x.text}"`).join(" / ")}`

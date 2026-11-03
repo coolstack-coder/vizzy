@@ -1,6 +1,6 @@
 "use client";
 
-import { Code2, Crosshair, Lock, MessageSquarePlus, Plus, RefreshCw, X } from "lucide-react";
+import { Code2, Crosshair, Lock, MessageSquarePlus, Plus, RefreshCw, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { focusPage, movePage, removeBalloon, selectOption, setFocusPoint, updateBalloon } from "@/lib/actions";
 import { send } from "@/lib/director/run";
@@ -9,6 +9,7 @@ import { useVizzy } from "@/lib/store";
 import type { Balloon, BalloonKind, Page, Project } from "@/lib/types";
 import { BalloonView, Btn, Kbd, PageImage, Swatches, Tails, formatMs, useImageUrl } from "./ui";
 import { ASPECT_RATIO } from "@/lib/defaults";
+import { staleReasons } from "@/lib/stale";
 
 export function Canvas() {
   const view = useVizzy((s) => s.view);
@@ -91,6 +92,7 @@ function PageEditor() {
       />
     );
 
+  const stale = staleReasons(project, page);
   const shown = page.options.find((o) => o.id === (page.selectedId ?? page.lockedOptionId)) ?? page.options.filter((o) => o.status === "ready").slice(-1)[0];
   const ratio = ASPECT_RATIO[project.bible.aspect];
 
@@ -131,6 +133,19 @@ function PageEditor() {
           <h2 className="font-title text-2xl">{page.title}</h2>
           <StatusPill status={page.status} />
         </div>
+        {stale.length > 0 && (
+          <div className="mb-3 flex w-full items-center gap-2 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
+            <TriangleAlert size={14} className="shrink-0" />
+            <span>Out of date: {stale.join("; ")}.</span>
+            <button
+              disabled={busy}
+              onClick={() => send(`Page ${index + 1} is out of date (${stale.join("; ")}). Give me fresh takes for page ${index + 1} with the current style and cast.`)}
+              className="ml-auto shrink-0 rounded-md border border-warn/50 px-2 py-0.5 hover:bg-warn/15 disabled:opacity-40"
+            >
+              Redraw
+            </button>
+          </div>
+        )}
         <div
           ref={frame}
           className={`relative w-full overflow-hidden rounded-sm shadow-2xl shadow-black/60 ring-1 ring-line ${aiming ? "cursor-crosshair" : ""}`}
@@ -420,11 +435,15 @@ function Filmstrip() {
           >
             <PageImage imageId={opt?.imageId} aspect={project.bible.aspect} className={p.status === "generating" ? "pulse-ring" : ""} />
             <span className="absolute left-0.5 top-0.5 rounded bg-black/60 px-1 font-mono text-[9px] text-white">{i + 1}</span>
-            <span
-              className={`absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full ${
-                p.status === "locked" ? "bg-good" : p.status === "choosing" ? "bg-warn" : p.status === "generating" ? "bg-accent" : "bg-faint"
-              }`}
-            />
+            {staleReasons(project, p).length > 0 ? (
+              <TriangleAlert size={11} className="absolute bottom-0.5 right-0.5 rounded-sm bg-black/70 p-px text-warn" aria-label="Out of date" />
+            ) : (
+              <span
+                className={`absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full ${
+                  p.status === "locked" ? "bg-good" : p.status === "choosing" ? "bg-warn" : p.status === "generating" ? "bg-accent" : "bg-faint"
+                }`}
+              />
+            )}
           </button>
         );
       })}
