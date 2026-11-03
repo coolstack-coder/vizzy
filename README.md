@@ -1,5 +1,7 @@
 # Vizzy
 
+[![CI](https://github.com/coolstack-coder/vizzy/actions/workflows/ci.yml/badge.svg)](https://github.com/coolstack-coder/vizzy/actions/workflows/ci.yml)
+
 **Make a graphic novel, picture book or film storyboard by chatting with an AI creative director, one page at a time.**
 
 You describe a story. Vizzy helps you settle on a visual style and the main characters, then plans the pages. For each page it draws a few different takes, and you pick one, refine it in chat and lock it. At the end Vizzy assembles the pages into a slideshow that loops. You can export it as an MP4, a PDF, a ZIP of PNGs or a single offline HTML file.
@@ -53,6 +55,12 @@ Image models garble text, and editing a line of dialogue shouldn't cost a re-ren
 **7. Each turn carries a compact snapshot instead of relying on the model's memory.**
 Every user turn includes a short `<project_state>` text snapshot: the phase, the bible, the cast and every page's status and options. Images are never put into the director's context. The system prompt and tool list form a cached prefix. The transcript is append-only and thinking blocks are passed back unchanged.
 
+**8. Edits after the fact don't silently break the book.**
+Each locked page records the style bible and character versions it was drawn with. If you change the bible or redesign a character later, the affected pages are flagged as out of date in the editor and the filmstrip, with a one-click redraw. The director also sees these pages marked in its snapshot and offers to fix them, but never redraws without asking.
+
+**9. Your work is portable, and the server is defensive.**
+Books live in IndexedDB, which repairs itself if a database is left half-initialised. A one-file `.vizzy.json` backup (images inlined) moves a book to another machine. The API routes validate the size and shape of every request with zod before anything reaches a model provider: image references must be base64 data URLs, never arbitrary URLs.
+
 ---
 
 ## Architecture
@@ -86,7 +94,9 @@ flowchart LR
 | `src/lib/art/sketch.ts` | Seeded SVG "storyboard sketch" renderer for keyless mode |
 | `src/lib/timeline.ts`, `render.ts` | One `renderFrame(t)` shared by the live player and the MP4 encoder |
 | `src/lib/export.ts` | WebCodecs MP4 (mediabunny, WebM fallback), jsPDF, JSZip, standalone HTML |
-| `src/app/api/*` | Streaming director proxy; Gemini / OpenAI image generation and editing with retry |
+| `src/lib/stale.ts` | Detects locked pages that no longer match the current bible or cast |
+| `src/lib/backup.ts` | One-file project backup and validated import |
+| `src/app/api/*`, `src/lib/server/validate.ts` | Streaming director proxy; Gemini / OpenAI image generation and editing with retry; request validation |
 
 ---
 
@@ -108,10 +118,13 @@ OPENAI_API_KEY=...      # images: gpt-image-2
 Keys can also be pasted into **Settings** inside the app. They stay in that browser's local storage and are sent with each request; the server never stores them. The header pill shows which director and image provider are active, and **Settings** switches between them.
 
 ```bash
-npm test           # Vitest: prompt compiler, tool schemas, offline director
+npm test           # Vitest: prompt compiler, tool schemas, offline director,
+                   # stale pages, backups, API validation, sketch renderer
 npm run lint
 npm run build
 ```
+
+CI runs lint, typecheck, tests and a production build on every push.
 
 ### Keyboard
 
@@ -123,6 +136,6 @@ npm run build
 
 - **Continuity check on lock:** a Claude vision pass that compares the locked page with the reference sheets ("Eli's red-cross armband is missing").
 - **"Vizzy's pick":** have Claude rank the takes with a short reason, shown as a badge.
-- **Stale-page detection:** when the bible or a character changes version, flag locked pages built with the old version and offer to re-render them with the old image as the composition reference.
+- **Composition-preserving redraws:** when redrawing an out-of-date page, send its old image as a layout reference so only the style changes.
 - **Multi-panel page layouts**, plus music and narration in the exported film.
 - **Shareable hosted links** (requires storage and auth; the HTML export covers offline sharing for now).
