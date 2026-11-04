@@ -6,6 +6,12 @@
 
 You describe a story. Vizzy helps you settle on a visual style and the main characters, then plans the pages. For each page it draws a few different takes, and you pick one, refine it in chat and lock it. At the end Vizzy assembles the pages into a slideshow that loops. You can export it as an MP4, a PDF, a ZIP of PNGs or a single offline HTML file.
 
+## Walkthrough video (6 min)
+
+[![Watch the 6-minute walkthrough of Vizzy](docs/walkthrough-poster.jpg)](https://github.com/coolstack-coder/vizzy/blob/main/docs/vizzy-walkthrough.mp4)
+
+A narrated, beginner-friendly tour, recorded from the running app: writing the brief, choosing a style bible, the cast, the page plan, picking and refining takes, editing lettering, the compiled-prompt inspector, the finished film and exports, then how it works under the hood and how to run it. Click the image to play it, or [download the MP4](docs/vizzy-walkthrough.mp4). The narration was generated with ElevenLabs; the demo uses the keyless offline mode.
+
 ![Studio: chat on the left, the page being worked on and its takes on the right](docs/studio.jpg)
 
 > **It runs with no API keys.** Clone the repo, run `npm run dev` and go through the whole flow. With no keys, a scripted offline director and a procedural "sketch" renderer stand in for Claude and the image models. Add keys and the same UI drives Claude and Gemini / OpenAI instead.
